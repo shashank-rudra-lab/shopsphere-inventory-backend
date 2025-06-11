@@ -1,0 +1,32 @@
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/silent-octagon-460701-a0/inventory-backend/inventory-backend:$BUILD_ID'
+      - '.'
+
+  # Step 2: Push Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/silent-octagon-460701-a0/inventory-backend/inventory-backend:$BUILD_ID'
+
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud config set project silent-octagon-460701-a0
+        gcloud run deploy product-backend \
+          --us-central1-docker.pkg.dev/silent-octagon-460701-a0/inventory-backend/inventory-backend:$BUILD_ID \
+          --region us-central1 \
+          --platform managed \
+          --service-account shopshere-product-service@silent-octagon-460701-a0.iam.gserviceaccount.com \
+          --allow-unauthenticated
+
+options:
+  logging: CLOUD_LOGGING_ONLY
