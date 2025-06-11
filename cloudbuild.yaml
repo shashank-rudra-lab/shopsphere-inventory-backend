@@ -22,7 +22,7 @@ steps:
       - |
         gcloud config set project silent-octagon-460701-a0
         gcloud run deploy product-backend \
-          --us-central1-docker.pkg.dev/silent-octagon-460701-a0/inventory-backend/inventory-backend:$BUILD_ID \
+          --image us-central1-docker.pkg.dev/silent-octagon-460701-a0/inventory-backend/inventory-backend:$BUILD_ID \
           --region us-central1 \
           --platform managed \
           --service-account shopshere-product-service@silent-octagon-460701-a0.iam.gserviceaccount.com \
