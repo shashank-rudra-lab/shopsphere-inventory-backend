@@ -1,12 +1,31 @@
 from flask import Flask, render_template, request
-from google.cloud import datastore
+from google.cloud import datastore, pubsub_v1
 import requests
+import json
 
 app = Flask(__name__)
 
 datastore_client = datastore.Client()
 
 PRODUCTS_API_URL = "https://product-backend-327554758505.us-central1.run.app/products"
+
+# Pub/Sub setup
+PROJECT_ID = "silent-octagon-460701-a0"
+TOPIC_ID = "inventory-stock-alerts"
+publisher = pubsub_v1.PublisherClient()
+topic_path = publisher.topic_path(PROJECT_ID, TOPIC_ID)
+
+def publish_stock_alert(product_id, product_name, stock):
+    data = {
+        "product_id": product_id,
+        "product_name": product_name,
+        "stock": stock
+    }
+    print(f"Publishing to PubSub: {data}")
+    future = publisher.publish(topic_path, json.dumps(data).encode("utf-8"))
+    message_id = future.result()
+    print(f"Published message ID: {message_id}")
+    return message_id
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -35,8 +54,12 @@ def decrement_stock():
     entity = datastore_client.get(key)
     entity['stock'] = max(0, entity['stock'] - decrement)
     datastore_client.put(entity)
-    return {'product_id': product_id, 'new_stock': entity['stock']}, 200
 
+    # Publish to Pub/Sub if stock < 10
+    if entity['stock'] < 10:
+        publish_stock_alert(product_id, entity.get('product_name', ''), entity['stock'])
+
+    return {'product_id': product_id, 'new_stock': entity['stock']}, 200
 
 @app.route('/get_all_stock', methods=['GET'])
 def get_all_stock():
